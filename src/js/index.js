@@ -10,14 +10,15 @@ const btnLoadMore = document.querySelector('.load-more');
 let gallerySimpleLightbox = new SimpleLightbox('.gallery a');
 
 class Style {
-  none; 
+  none;
   block;
-  constructor() { 
+  constructor() {
     this.none = "none";
     this.block = "block";
   }
-
 }
+
+let currentHits = 0;
 
 btnLoadMore.style.display = new Style().none;
 
@@ -25,47 +26,55 @@ let pageNumber = 1;
 
 btnSearch.addEventListener('click', onSerchClick);
 
-function onSerchClick(e){
+async function onSerchClick(e) {
   e.preventDefault();
-  cleanGallery();
   const trimmedValue = input.value.trim();
-  if (trimmedValue !== '') {
-    fetchImages(trimmedValue, pageNumber).then(foundData => {
-      renderImageList(foundData.hits);
-      Notiflix.Notify.success(
-        `Hooray! We found ${foundData.totalHits} images.`
-      );
-      btnLoadMore.style.display = new Style().block;
-      gallerySimpleLightbox.refresh();
-    }).catch(error => {
-      Notiflix.Notify.failure(
-        'Sorry, there are no images matching your search query. Please try again.'
-      );
-    });
+  console.log(trimmedValue);
+
+  try {
+    if (trimmedValue === '') {
+      cleanGallery();
+      Notiflix.Notify.warning('Enter your search query');
+    } else {
+      const foundData = await fetchImages(trimmedValue, pageNumber);
+      cleanGallery();
+
+      if (foundData.hits.length === 0) {
+        Notiflix.Notify.failure('Sorry, there are no images matching your search query. Please try again.');
+      } else {
+        renderImageList(foundData.hits);
+        Notiflix.Notify.success(
+          `Hooray! We found ${foundData.totalHits} images.`
+        );
+        btnLoadMore.style.display = 'block';
+        gallerySimpleLightbox.refresh();
+      }
+    }
+  } catch (error) {
+    Notiflix.Notify.failure("We're sorry, but you've reached the end of search results.");
+    console.log(error.message);
   }
-  }
-  
+}
 
 btnLoadMore.addEventListener('click', onLoadMoreClick);
 
 
-function onLoadMoreClick(e){
+async function onLoadMoreClick(e) {
   pageNumber++;
   const trimmedValue = input.value.trim();
   btnLoadMore.style.display = new Style().none;
-  fetchImages(trimmedValue, pageNumber).then(foundData => {
+
+  try {
+    const foundData = await fetchImages(trimmedValue, pageNumber);
     renderImageList(foundData.hits);
     gallerySimpleLightbox.refresh();
-    Notiflix.Notify.success(
-      `Hooray! We found ${foundData.totalHits} images.`
-    );
+    Notiflix.Notify.success(`Hooray! We found ${foundData.totalHits} images.`);
     btnLoadMore.style.display = new Style().block;
-  }).catch(error => { 
-    Notiflix.Notify.failure(
-    'Sorry, there are no images matching your search query. Please try again.'
-  )});
-  
+  } catch (error) {
+    Notiflix.Notify.failure('Sorry, there are no images matching your search query. Please try again.')
+  }
 }
+
 function renderImageList(images) {
   console.log(images, 'images');
   const markup = images
